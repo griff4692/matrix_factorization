@@ -118,8 +118,8 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_data.to_numpy(), batch_size=32, shuffle=True)
     dev_loader = DataLoader(dev_data.to_numpy(), batch_size=32)
 
-    num_epochs = 10
-    batch_size = 32
+    num_epochs = 20
+    batch_size = 128
 
     model = MatrixFactorizer(N, M)
     optimizer = SGD(model.parameters(), lr=0.01, weight_decay=1e-2)
@@ -134,7 +134,8 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             users = batch[:, 0].long()
             movies = batch[:, 1].long()
-            ratings = (batch[:, 2] - rating_mean).float()
+            # ratings = (batch[:, 2] - rating_mean).float()
+            ratings = batch[:, 2].float()
 
             ratings_guess = model(users, movies)
             batch_loss = torch.pow(ratings - ratings_guess, 2).mean()
