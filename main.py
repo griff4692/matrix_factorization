@@ -11,7 +11,7 @@ SEED = 1992
 np.random.seed(SEED)
 
 
-def most_similar_to(movie_id, movie_matrix_similarity, movie_vocab, movie_names, topk=5):
+def most_similar_to(movie_id, movie_matrix_similarity, movie_vocab, movie_names, topk=3):
     similarity = movie_matrix_similarity[movie_id]
     similarity[movie_id] = -1
     closest_movie_ids = np.argsort(similarity)[-topk:][::-1]
@@ -115,15 +115,15 @@ if __name__ == '__main__':
     train_data = ratings[:train_idx]
     dev_data = ratings[train_idx:]
 
+    batch_size = 128
     train_loader = DataLoader(train_data.to_numpy(), batch_size=32, shuffle=True)
     dev_loader = DataLoader(dev_data.to_numpy(), batch_size=32)
 
-    num_epochs = 20
-    batch_size = 128
-
+    num_epochs = 15
     model = MatrixFactorizer(N, M)
     optimizer = SGD(model.parameters(), lr=0.01, weight_decay=1e-2)
 
+    train_losses, dev_losses = [], []
     for epoch in range(1, num_epochs + 1):
         epoch_train_loss = 0.0
         num_train_batches = 0
@@ -134,9 +134,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             users = batch[:, 0].long()
             movies = batch[:, 1].long()
-            # ratings = (batch[:, 2] - rating_mean).float()
-            ratings = batch[:, 2].float()
-
+            ratings = (batch[:, 2] - rating_mean).float()
             ratings_guess = model(users, movies)
             batch_loss = torch.pow(ratings - ratings_guess, 2).mean()
             batch_loss.backward()
@@ -153,10 +151,14 @@ if __name__ == '__main__':
             batch_loss = torch.pow(ratings - ratings_guess, 2).mean()
             num_dev_batches += 1
             epoch_dev_loss += batch_loss.item()
-        print('Epoch loss. Train={}, Dev={}'.format(epoch_train_loss / float(num_train_batches),
-                                                    epoch_dev_loss / float(num_dev_batches)))
+        tl = epoch_train_loss / float(num_train_batches)
+        dl = epoch_dev_loss / float(num_dev_batches)
+        train_losses.append(str(tl))
+        dev_losses.append(str(dl))
+        print('Epoch loss. Train={}, Dev={}'.format(tl, dl))
 
-    random_movie_ids = np.random.choice(np.arange(M), size=25, replace=False)
+    print(','.join(train_losses))
+    print(','.join(dev_losses))
+    random_movie_ids = np.random.choice(np.arange(M), size=10, replace=False)
     attributes = model.movies.weight
     sample_similar_movies(attributes, movie_vocab, movie_names)
-
